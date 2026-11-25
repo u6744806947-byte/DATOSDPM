@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Monitor ESP32</title>
+  <title>Monitor ESP32 Wokwi</title>
   <style>
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -60,55 +60,56 @@
 <body>
   <div class="panel">
     <div class="config">
-      <input id="ipInput" type="text" placeholder="Ej: http://192.168.1.50" />
-      <button onclick="guardarIp()">Conectar</button>
+      <input id="bucketInput" type="text" value="datosdpm_ivan_7391" />
+      <button onclick="guardarBucket()">Conectar</button>
     </div>
 
     <div class="dato" id="lineaTemp">temperatura: -- °C</div>
     <div class="dato" id="lineaMov">movimiento: --</div>
     <div class="dato" id="lineaAire">calidad del aire: -- %</div>
 
-    <div class="estado" id="estado">Introduce la IP del ESP32 y pulsa Conectar.</div>
+    <div class="estado" id="estado">Pulsa Conectar para leer los datos de Wokwi.</div>
   </div>
 
   <script>
-    const input = document.getElementById('ipInput');
+    const input = document.getElementById('bucketInput');
     const estado = document.getElementById('estado');
     let timer = null;
 
-    input.value = localStorage.getItem('esp32_base_url') || '';
+    input.value = localStorage.getItem('wokwi_bucket_id') || 'datosdpm_ivan_7391';
 
-    function guardarIp() {
-      const limpia = input.value.trim().replace(/\/+$/, '');
-      localStorage.setItem('esp32_base_url', limpia);
+    function guardarBucket() {
+      const limpia = input.value.trim() || 'datosdpm_ivan_7391';
+      input.value = limpia;
+      localStorage.setItem('wokwi_bucket_id', limpia);
       iniciarBucle();
     }
 
     async function leerDatos() {
-      const baseUrl = localStorage.getItem('esp32_base_url');
-      if (!baseUrl) return;
+      const bucket = localStorage.getItem('wokwi_bucket_id') || 'datosdpm_ivan_7391';
 
       try {
-        const resp = await fetch(`${baseUrl}/api/datos`, { cache: 'no-store' });
+        const url = `https://kvdb.io/${encodeURIComponent(bucket)}/lectura`;
+        const resp = await fetch(url, { cache: 'no-store' });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const d = await resp.json();
 
         document.getElementById('lineaTemp').textContent = `temperatura: ${d.temperatura} °C`;
         document.getElementById('lineaMov').textContent = `movimiento: ${d.movimiento}`;
         document.getElementById('lineaAire').textContent = `calidad del aire: ${d['calidad del aire']} %`;
-        estado.textContent = `Actualizado desde ${baseUrl}`;
+        estado.textContent = `Actualizado desde Wokwi (${bucket})`;
       } catch (err) {
-        estado.textContent = `Sin conexión con ${baseUrl} (${err.message})`;
+        estado.textContent = `Esperando datos de Wokwi (${err.message})`;
       }
     }
 
     function iniciarBucle() {
       if (timer) clearInterval(timer);
       leerDatos();
-      timer = setInterval(leerDatos, 1000);
+      timer = setInterval(leerDatos, 1500);
     }
 
-    if (input.value) iniciarBucle();
+    iniciarBucle();
   </script>
 </body>
 </html>
