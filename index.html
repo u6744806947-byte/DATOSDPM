@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitor ESP32</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 24px;
+    }
+    .panel {
+      max-width: 460px;
+      margin: 0 auto;
+      background: #1e293b;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+    }
+    .config {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    input {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #f8fafc;
+    }
+    button {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: none;
+      background: #2563eb;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .dato {
+      background: #0f172a;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 10px;
+      font-family: monospace;
+      font-size: 1.05rem;
+    }
+    .estado {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="config">
+      <input id="ipInput" type="text" placeholder="Ej: http://192.168.1.50" />
+      <button onclick="guardarIp()">Conectar</button>
+    </div>
+
+    <div class="dato" id="lineaTemp">temperatura: -- °C</div>
+    <div class="dato" id="lineaMov">movimiento: --</div>
+    <div class="dato" id="lineaAire">calidad del aire: -- %</div>
+
+    <div class="estado" id="estado">Introduce la IP del ESP32 y pulsa Conectar.</div>
+  </div>
+
+  <script>
+    const input = document.getElementById('ipInput');
+    const estado = document.getElementById('estado');
+    let timer = null;
+
+    input.value = localStorage.getItem('esp32_base_url') || '';
+
+    function guardarIp() {
+      const limpia = input.value.trim().replace(/\/+$/, '');
+      localStorage.setItem('esp32_base_url', limpia);
+      iniciarBucle();
+    }
+
+    async function leerDatos() {
+      const baseUrl = localStorage.getItem('esp32_base_url');
+      if (!baseUrl) return;
+
+      try {
+        const resp = await fetch(`${baseUrl}/api/datos`, { cache: 'no-store' });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const d = await resp.json();
+
+        document.getElementById('lineaTemp').textContent = `temperatura: ${d.temperatura} °C`;
+        document.getElementById('lineaMov').textContent = `movimiento: ${d.movimiento}`;
+        document.getElementById('lineaAire').textContent = `calidad del aire: ${d['calidad del aire']} %`;
+        estado.textContent = `Actualizado desde ${baseUrl}`;
+      } catch (err) {
+        estado.textContent = `Sin conexión con ${baseUrl} (${err.message})`;
+      }
+    }
+
+    function iniciarBucle() {
+      if (timer) clearInterval(timer);
+      leerDatos();
+      timer = setInterval(leerDatos, 1000);
+    }
+
+    if (input.value) iniciarBucle();
+  </script>
+</body>
+</html>
